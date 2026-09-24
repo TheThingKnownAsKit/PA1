@@ -1,0 +1,16 @@
+total 140
+drwxrwxrwx  2 hguo10 hguo10  4096 Feb 12 12:01 .
+drwxrwxrwx 13 root   root    4096 Feb 12 11:39 ..
+-rwxrwxrwx  1 hguo10 hguo10 33842 Feb  9  2022 a.out
+-rwxr-xr-x  1 hguo10 hguo10 16088 Feb 12 11:54 dup-example
+-rw-r--r--  1 hguo10 hguo10  1211 Feb 12 11:55 dup-example.c
+---xr-x--T  1 hguo10 hguo10   104 Feb 12 11:54 dup.txt
+-rwxr-xr-x  1 hguo10 hguo10 16048 Feb 12 11:56 dup2-example
+-rw-r--r--  1 hguo10 hguo10   872 Feb 12 11:57 dup2-example.c
+--wx--x--T  1 hguo10 hguo10    40 Feb 12 11:56 dup2.txt
+-rwxr-xr-x  1 hguo10 hguo10 16280 Feb 12 11:58 dup2ex
+-rwxrwxrwx  1 hguo10 hguo10  1335 Feb 12 11:49 dup2ex.c
+-rw-r--r--  1 hguo10 hguo10    88 Feb 12 11:59 dup2ex.txt
+-rwxr-xr-x  1 hguo10 hguo10 16448 Feb 12 12:01 dup2fork
+-rwxrwxrwx  1 hguo10 hguo10  1839 Feb 12 12:01 dup2fork.c
+-rw-r--r--  1 hguo10 hguo10     0 Feb 12 12:01 dup2fork.txt
