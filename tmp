@@ -1,5 +1,4 @@
 file1.txt
-file2.txt
-file3.txt
-testdir/file3.txt
-testdir/file2.txt
+"(and) You should be seeing this"
+file1.txt
+"(or) You should be seeing this"

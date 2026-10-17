@@ -29,6 +29,11 @@ int execute_command(const shell_command& cmd, int& previous_pipe)
 
     // pipe file descriptor
     int fd[2] = {-1, -1};
+    if (cmd.cout_mode == ostream_mode::pipe) {
+        if (pipe(fd) < 0) { // you make the fd right here
+            return -1; // it returns -1 on failure so fail up
+        }
+    }
 
     // this is where we fork the process
     pid_t child_pid = fork();
@@ -39,12 +44,18 @@ int execute_command(const shell_command& cmd, int& previous_pipe)
         return -1;
     } else if (child_pid == 0) {
         // child forked successfully so we set up redirection and piping as needed and execute
+
+        // current commands input is from a pipe, so dupe the previous pipe to the input
+        if (cmd.cin_mode == istream_mode::pipe && previous_pipe >= 0) {
+            dup2(previous_pipe, STDIN_FILENO);
+        }
+
+        // the current commands output is a pipe, so dupe the write end to the output
         if (cmd.cout_mode == ostream_mode::pipe) {
             dup2(fd[WRITE_END], STDOUT_FILENO);
         }
-        if (cmd.cin_mode == istream_mode::pipe && previous_pipe >= 0) {
-            dup2(fd[READ_END], STDIN_FILENO);
-        }
+
+        // relevant info has been duped or stored, so close everything (CHILD CLOSE)
         if (previous_pipe >= 0) close(previous_pipe);
         if (fd[READ_END] >= 0)  close(fd[READ_END]);
         if (fd[WRITE_END] >= 0) close(fd[WRITE_END]);
@@ -86,15 +97,17 @@ int execute_command(const shell_command& cmd, int& previous_pipe)
     else {
         int status;
 
-        // close the write end of the pipe for the parent
+        // THE PARENT
+        // don't need previous pipe as the parent is done executing, close it
         if (previous_pipe >= 0) close(previous_pipe);
+
+        // if specifically the parents outmode is pipe, store that in previous pipe for next time
         if (cmd.cout_mode == ostream_mode::pipe) {
-            close(fd[WRITE_END]);
+            close(fd[WRITE_END]); // you can also close the write end since we're not using that anymore
             previous_pipe = fd[READ_END]; // next command reads from this
         } else {
             previous_pipe = -1;
         }
-
 
         waitpid(child_pid, &status, 0); // wait for the child
 
@@ -115,7 +128,7 @@ int main(int argc, char* argv[])
     }
 
     std::string input_line;
-    int previous_pipe;
+    int previous_pipe = -1;
 
     for (int i=0;i<MAX_ALLOWED_LINES;i++) { // Limits the shell to MAX_ALLOWED_LINES
         // Print the prompt.
@@ -133,6 +146,7 @@ int main(int argc, char* argv[])
             std::vector<shell_command> shell_commands
                     = parse_command_string(input_line);
 
+            previous_pipe = -1; // reset previous pipe for each line since pipe is per line
             int previous_status = 0;
             next_command_mode pending_mode = next_command_mode::always;
 
@@ -162,7 +176,7 @@ int main(int argc, char* argv[])
             }
         }
         catch (const std::runtime_error& e) {
-            std::cout << "osh: " << e.what() << "\n";
+            std::cout << e.what() << "\n"; // had to change this to match 7 expected output
         }
     }
 
