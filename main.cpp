@@ -11,8 +11,10 @@
 #include "parser.hpp"
 
 #define MAX_ALLOWED_LINES 25
+#define READ_END 0
+#define WRITE_END 1
 
-int execute_command(const shell_command& cmd)
+int execute_command(const shell_command& cmd, int& previous_pipe)
 {
     // itemized_cmd here represents a vector of arguments to execute
     // each is just gotten from the cmd parameter.
@@ -25,6 +27,9 @@ int execute_command(const shell_command& cmd)
     }
     itemized_cmd.push_back(nullptr);
 
+    // pipe file descriptor
+    int fd[2] = {-1, -1};
+
     // this is where we fork the process
     pid_t child_pid = fork();
 
@@ -33,7 +38,16 @@ int execute_command(const shell_command& cmd)
         std::cerr << "fork failed\n";
         return -1;
     } else if (child_pid == 0) {
-        // child forked successfully so we set up redirection as needed and execute
+        // child forked successfully so we set up redirection and piping as needed and execute
+        if (cmd.cout_mode == ostream_mode::pipe) {
+            dup2(fd[WRITE_END], STDOUT_FILENO);
+        }
+        if (cmd.cin_mode == istream_mode::pipe && previous_pipe >= 0) {
+            dup2(fd[READ_END], STDIN_FILENO);
+        }
+        if (previous_pipe >= 0) close(previous_pipe);
+        if (fd[READ_END] >= 0)  close(fd[READ_END]);
+        if (fd[WRITE_END] >= 0) close(fd[WRITE_END]);
 
         // redirection INTO a file
         if (cmd.cin_mode == istream_mode::file) {
@@ -71,6 +85,17 @@ int execute_command(const shell_command& cmd)
     }
     else {
         int status;
+
+        // close the write end of the pipe for the parent
+        if (previous_pipe >= 0) close(previous_pipe);
+        if (cmd.cout_mode == ostream_mode::pipe) {
+            close(fd[WRITE_END]);
+            previous_pipe = fd[READ_END]; // next command reads from this
+        } else {
+            previous_pipe = -1;
+        }
+
+
         waitpid(child_pid, &status, 0); // wait for the child
 
         if (WIFEXITED(status)) {
@@ -90,6 +115,7 @@ int main(int argc, char* argv[])
     }
 
     std::string input_line;
+    int previous_pipe;
 
     for (int i=0;i<MAX_ALLOWED_LINES;i++) { // Limits the shell to MAX_ALLOWED_LINES
         // Print the prompt.
@@ -126,7 +152,7 @@ int main(int argc, char* argv[])
                 }
 
                 if (can_run) {
-                    previous_status = execute_command(cmd);
+                    previous_status = execute_command(cmd, previous_pipe);
                 }
                 else {
                     previous_status = previous_status;
